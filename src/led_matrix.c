@@ -20,6 +20,8 @@ static const struct display_buffer_descriptor buf_desc = {
 	.pitch    = 8,
 };
 
+static const struct device *led_matrix_dev = DEVICE_DT_GET_ONE(nordic_nrf_led_matrix);
+
 static void update_block_3x3(const struct device *dev)
 {
 	int ret;
@@ -179,34 +181,63 @@ static void update_through_framebuffer(const struct device *dev)
 	}
 }
 
-void led_matrix_test(void)
+int led_matrix_init(void)
 {
-	printk("nRF LED matrix sample on %s\n", CONFIG_BOARD);
-
 	int ret;
-	const struct device *dev = DEVICE_DT_GET_ONE(nordic_nrf_led_matrix);
 
-	if (!dev) {
-		printk("Display device not ready\n");
-		return;
-	}
-
-	display_get_capabilities(dev, &caps);
+	display_get_capabilities(led_matrix_dev, &caps);
 	if (!(caps.supported_pixel_formats & PIXEL_FORMAT_MONO01)) {
 		printk("Expected pixel format not supported\n");
-		return;
+		return -1;
 	}
 
-	ret = display_set_pixel_format(dev, PIXEL_FORMAT_MONO01);
+	ret = display_set_pixel_format(led_matrix_dev, PIXEL_FORMAT_MONO01);
 	if (ret < 0) {
 		printk("display_set_pixel_format failed: %u/%d\n",
 			__LINE__, ret);
 	}
 
-	printk("Started\n");
+	ret = display_set_brightness(led_matrix_dev, 0x7F);
+	if (ret < 0) {
+		printk("display_set_brightness failed: %u/%d\n",
+			__LINE__, ret);
+	}
+
+	return 0;
+}
+
+void led_matrix_set_all(const uint8_t v)
+{
+	int ret;
+
+	buf[0] = PIXEL_MASK(v, v, v, v, v);
+	buf[1] = PIXEL_MASK(v, v, v, v, v);
+	buf[2] = PIXEL_MASK(v, v, v, v, v);
+	buf[3] = PIXEL_MASK(v, v, v, v, v);
+	buf[4] = PIXEL_MASK(v, v, v, v, v);
+	ret = display_write(led_matrix_dev, 0, 0, &buf_desc, buf);
+	if (ret < 0) {
+		printk("display_write failed: %u/%d\n",
+			__LINE__, ret);
+		return;
+	}
+
+	ret = display_blanking_off(led_matrix_dev);
+	if (ret < 0) {
+		printk("display_blanking_off failed: %u/%d\n",
+			__LINE__, ret);
+		return;
+	}
+}
+
+void led_matrix_test(void)
+{
+	int ret;
+
+	printk("led_matrix_test() Started\n");
 
 	for (;;) {
-		ret = display_set_brightness(dev, 0x7F);
+		ret = display_set_brightness(led_matrix_dev, 0x7F);
 		if (ret < 0) {
 			printk("display_set_brightness failed: %u/%d\n",
 				__LINE__, ret);
@@ -217,13 +248,13 @@ void led_matrix_test(void)
 		buf[2] = PIXEL_MASK(1, 0, 1, 0, 1);
 		buf[3] = PIXEL_MASK(1, 0, 0, 1, 1);
 		buf[4] = PIXEL_MASK(1, 0, 1, 0, 1);
-		ret = display_write(dev, 0, 0, &buf_desc, buf);
+		ret = display_write(led_matrix_dev, 0, 0, &buf_desc, buf);
 		if (ret < 0) {
 			printk("display_write failed: %u/%d\n",
 				__LINE__, ret);
 		}
 
-		ret = display_blanking_off(dev);
+		ret = display_blanking_off(led_matrix_dev);
 		if (ret < 0) {
 			printk("display_blanking_off failed: %u/%d\n",
 				__LINE__, ret);
@@ -231,15 +262,15 @@ void led_matrix_test(void)
 
 		k_sleep(K_MSEC(500));
 
-		update_block_3x3(dev);
+		update_block_3x3(led_matrix_dev);
 
 		k_sleep(K_MSEC(500));
 
-		update_block_5x5(dev);
+		update_block_5x5(led_matrix_dev);
 
 		k_sleep(K_MSEC(200));
 
-		ret = display_blanking_on(dev);
+		ret = display_blanking_on(led_matrix_dev);
 		if (ret < 0) {
 			printk("display_blanking_on failed: %u/%d\n",
 				__LINE__, ret);
@@ -247,7 +278,7 @@ void led_matrix_test(void)
 
 		k_sleep(K_MSEC(500));
 
-		ret = display_blanking_off(dev);
+		ret = display_blanking_off(led_matrix_dev);
 		if (ret < 0) {
 			printk("display_blanking_off failed: %u/%d\n",
 				__LINE__, ret);
@@ -255,9 +286,9 @@ void led_matrix_test(void)
 
 		k_sleep(K_MSEC(500));
 
-		show_all_brightness_levels(dev);
+		show_all_brightness_levels(led_matrix_dev);
 
-		update_through_framebuffer(dev);
+		update_through_framebuffer(led_matrix_dev);
 
 		k_sleep(K_MSEC(500));
 	}

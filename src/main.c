@@ -37,10 +37,16 @@ K_TIMER_DEFINE(app_timer, app_timer_handler, NULL);
 
 static void app_work_handler(struct k_work *work)
 {
+    static bool led = false;
+
+    LOG_INF("app_work_handler(): dummy=%d", send_data.dummy);
     k_msleep(100);
 
     send_data.dummy++;
     bt_app_send_data(&send_data, sizeof(send_data_t));
+
+    led_matrix_set_all(led);
+    led = !led;
 }
 
 static void app_timer_handler(struct k_timer *dummy)
@@ -100,10 +106,15 @@ void main(void)
         return;
     }
 
+    ret = led_matrix_init();
+    if (ret) {
+        printk("led_matrix_init() failed: %u/%d\n",
+            __LINE__, ret);
+        return;
+    }
+
     /* start periodic timer that expires once every 10 seconds */
     k_timer_start(&app_timer, K_SECONDS(1), K_MSEC(SLEEP_TIME_MS));
-
-    led_matrix_test();
 
     // do nothing
 }
