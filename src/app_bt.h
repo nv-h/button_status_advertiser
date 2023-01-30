@@ -9,6 +9,11 @@
 
 #define DEVICE_NAME     CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
+
+#define CUSTOM_DATA_BUTTON_ON  0x01
+#define CUSTOM_DATA_BUTTON_OFF 0x00
+#define CUSTOM_DATA_SIZE       1
+
 // random number
 #define APP_BT_UUID_BASE_VAL BT_UUID_128_ENCODE(0xc7839aa8, 0x1903, 0x40b5, 0xa8f0, 0x426e09ffb390)
 #define APP_BT_UUID_CHAR_VAL BT_UUID_128_ENCODE(0xc7839aa9, 0x1903, 0x40b5, 0xa8f0, 0x426e09ffb390)
@@ -39,13 +44,12 @@ int bt_app_init(struct bt_app_cb *callbacks);
  *
  * If the notify is not enabled, the data will be discarded.
  *
- * @param[in] data notify data. Able to input any data.
- * @param[in] len length of notify data.
+ * @param[in] data notify data. Able to input only 1 byte.
  *
  * @retval 0 If the operation was successful.
  *           Otherwise, a (negative) error code is returned.
  */
-int bt_app_send_data(void *data, int len);
+int bt_app_send_data(uint8_t data);
 
 /** @brief Start advertising.
  *
@@ -53,5 +57,7 @@ int bt_app_send_data(void *data, int len);
  *           Otherwise, a (negative) error code is returned.
  */
 int bt_app_advertise_start(void);
+
+int bt_app_advertise_update(uint8_t data);
 
 #endif

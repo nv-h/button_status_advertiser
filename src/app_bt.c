@@ -18,8 +18,11 @@
 
 LOG_MODULE_REGISTER(app_bt, CONFIG_LOG_DEFAULT_LEVEL);
 
-static bool             notify_enabled;
-static char             char_value[APP_BT_MAX_ATTR_LEN];
+static uint8_t button_status = CUSTOM_DATA_BUTTON_OFF;
+
+static bool notify_enabled;
+static char char_value[APP_BT_MAX_ATTR_LEN];
+
 static struct bt_app_cb app_cb;
 
 static void app_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
@@ -62,13 +65,13 @@ int bt_app_init(struct bt_app_cb *callbacks)
     return bt_enable(NULL);
 }
 
-int bt_app_send_data(void *data, int len)
+int bt_app_send_data(uint8_t data)
 {
     if (!notify_enabled) {
         return -EACCES;
     }
 
-    return bt_gatt_notify(NULL, &app_svc.attrs[2], data, (uint16_t)len);
+    return bt_gatt_notify(NULL, &app_svc.attrs[2], &data, 1);
 }
 
 int bt_app_advertise_start(void)
@@ -76,6 +79,7 @@ int bt_app_advertise_start(void)
     const struct bt_data ad[] = {
         BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
         BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+        BT_DATA(BT_DATA_MANUFACTURER_DATA, &button_status, CUSTOM_DATA_SIZE),
     };
 
     const struct bt_data sd[] = {
@@ -83,4 +87,20 @@ int bt_app_advertise_start(void)
     };
 
     return bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+}
+
+int bt_app_advertise_update(uint8_t data)
+{
+    button_status = data;
+    const struct bt_data ad[] = {
+        BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+        BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
+        BT_DATA(BT_DATA_MANUFACTURER_DATA, &button_status, CUSTOM_DATA_SIZE),
+    };
+
+    const struct bt_data sd[] = {
+        BT_DATA_BYTES(BT_DATA_UUID128_ALL, APP_BT_UUID_BASE_VAL),
+    };
+
+    return bt_le_adv_update_data(ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 }

@@ -7,6 +7,5 @@ project(sensor)
 target_sources(app
     PRIVATE
         src/main.c
-        src/led_matrix.c
         src/app_bt.c
     )
